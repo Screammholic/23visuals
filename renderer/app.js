@@ -211,6 +211,13 @@ $('#playBtn').addEventListener('click', async () => {
    const button = $('#playBtn');
    button.disabled = true;
    $('#playLabel').textContent = 'Запуск...';
+   await window.launcher.saveSettings({
+      nickname: $('#nickInput').value.trim() || 'Player',
+      ram: Number($('#ramRange').value) || 4,
+      key: $('#keyInput').value.trim(),
+      installDir: $('#dirInput').value.trim(),
+      localMode: $('#localMode').checked
+   });
    setStatus('Проверка файлов...', 'busy');
    const result = await window.launcher.play();
    if (!result.ok) {
@@ -249,6 +256,10 @@ $('#ramRange').addEventListener('input', () => {
    const value = $('#ramRange').value;
    $('#ramValue').textContent = `${value} GB`;
    $('#ramLabel').textContent = `${value} GB`;
+   clearTimeout(window.__ramSave);
+   window.__ramSave = setTimeout(async () => {
+      settings = await window.launcher.saveSettings({ ram: Number(value) });
+   }, 250);
 });
 
 $('#saveBtn').addEventListener('click', async () => {
