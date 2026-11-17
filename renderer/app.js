@@ -125,6 +125,7 @@ async function loadVersion() {
 async function init() {
    const config = await window.launcher.config();
    $('#launcherVersion').textContent = config.version;
+   $('#authDate').textContent = new Date().toLocaleDateString('ru-RU');
 
    settings = await window.launcher.getSettings();
    $('#nickInput').value = settings.nickname || 'Player';
@@ -135,6 +136,15 @@ async function init() {
    $('#ramLabel').textContent = `${settings.ram || 4} GB`;
    $('#localMode').checked = Boolean(settings.localMode);
    updateAccount(settings.nickname || 'Player');
+
+   $('#authNick').value = settings.nickname || '';
+   $('#authKey').value = settings.key || '';
+   $('#rememberMe').checked = settings.remember !== false;
+   if (settings.loggedIn && settings.remember !== false) {
+      $('#authScreen').classList.add('hidden');
+   } else {
+      setTimeout(() => $('#authNick').focus(), 250);
+   }
 
    await loadVersion();
    await loadMods();
@@ -232,6 +242,88 @@ $('#repairBtn').addEventListener('click', async () => {
 $('#minBtn').addEventListener('click', () => window.launcher.minimize());
 $('#maxBtn').addEventListener('click', () => window.launcher.maximize());
 $('#closeBtn').addEventListener('click', () => window.launcher.close());
+
+async function login() {
+   const nick = $('#authNick').value.trim().replace(/[^a-zA-Z0-9_]/g, '');
+   const key = $('#authKey').value.trim();
+   const remember = $('#rememberMe').checked;
+
+   if (nick.length < 3) {
+      $('#authError').textContent = 'Ник должен быть от 3 символов (a-z, 0-9, _)';
+      return;
+   }
+
+   settings = await window.launcher.saveSettings({ nickname: nick, key, loggedIn: true, remember });
+   updateAccount(nick);
+   $('#nickInput').value = nick;
+   $('#keyInput').value = key;
+   $('#authError').textContent = '';
+   $('#authScreen').classList.add('hidden');
+   setStatus('Готов к запуску', 'ok');
+   log(`[Launcher] Вход: ${nick}`);
+}
+
+$('#loginBtn').addEventListener('click', login);
+$('#forgotBtn').addEventListener('click', () => window.launcher.openDiscord());
+[$('#authNick'), $('#authKey')].forEach((input) => {
+   input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') login();
+   });
+});
+
+$('#logoutBtn').addEventListener('click', async () => {
+   settings = await window.launcher.saveSettings({ loggedIn: false });
+   $('#authNick').value = settings.nickname || '';
+   $('#authKey').value = settings.key || '';
+   $('#rememberMe').checked = false;
+   $('#authScreen').classList.remove('hidden');
+   setTimeout(() => $('#authNick').focus(), 200);
+});
+
+function startBackground() {
+   const canvas = $('#bgCanvas');
+   const ctx = canvas.getContext('2d');
+   let width = 0;
+   let height = 0;
+   let particles = [];
+
+   function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      const count = Math.min(70, Math.floor(width * height / 26000));
+      particles = Array.from({ length: count }, () => ({
+         x: Math.random() * width,
+         y: Math.random() * height,
+         r: 0.6 + Math.random() * 1.7,
+         vx: (Math.random() - 0.5) * 0.18,
+         vy: (Math.random() - 0.5) * 0.18,
+         a: 0.08 + Math.random() * 0.28
+      }));
+   }
+
+   function frame() {
+      ctx.clearRect(0, 0, width, height);
+      for (const p of particles) {
+         p.x += p.vx;
+         p.y += p.vy;
+         if (p.x < -10) p.x = width + 10;
+         if (p.x > width + 10) p.x = -10;
+         if (p.y < -10) p.y = height + 10;
+         if (p.y > height + 10) p.y = -10;
+         ctx.beginPath();
+         ctx.fillStyle = `rgba(255,255,255,${p.a})`;
+         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+         ctx.fill();
+      }
+      requestAnimationFrame(frame);
+   }
+
+   window.addEventListener('resize', resize);
+   resize();
+   frame();
+}
+
+startBackground();
 
 document.addEventListener('keydown', (event) => {
    if (event.key === 'F12') {

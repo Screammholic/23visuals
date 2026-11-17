@@ -27,6 +27,8 @@ const defaultSettings = {
    ram: 4,
    key: '',
    localMode: false,
+   loggedIn: false,
+   remember: true,
    closeLauncherOnPlay: false
 };
 

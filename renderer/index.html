@@ -8,6 +8,46 @@
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+<canvas id="bgCanvas"></canvas>
+
+<div class="auth" id="authScreen">
+  <div class="auth-bg-mark">23</div>
+  <div class="auth-top">
+    <div class="auth-brand"><span class="brand-mark small">23</span><span>23VISUALS</span></div>
+    <div class="auth-meta"><span id="authDate">17.11.2026</span><span>v0.3.1</span></div>
+  </div>
+
+  <div class="auth-card">
+    <div class="auth-logo">23</div>
+    <h2>С возвращением</h2>
+    <p class="auth-sub">Войди, чтобы запустить 23Visuals</p>
+
+    <label class="auth-field">
+      <span>Никнейм</span>
+      <input id="authNick" maxlength="16" autocomplete="off" placeholder="Введи ник" />
+    </label>
+
+    <label class="auth-field">
+      <span>Пароль или ключ</span>
+      <input id="authKey" type="password" autocomplete="off" placeholder="Необязательно" />
+    </label>
+
+    <div class="auth-options">
+      <label class="auth-check"><input type="checkbox" id="rememberMe" checked /> Запомнить меня</label>
+      <button class="link-btn" id="forgotBtn">Забыли пароль?</button>
+    </div>
+
+    <button class="auth-btn" id="loginBtn">Войти</button>
+    <div class="auth-error" id="authError"></div>
+
+    <div class="auth-stats">
+      <div><strong>1000+</strong><span>игроков</span></div>
+      <div><strong>24/7</strong><span>онлайн</span></div>
+      <div><strong>0.3.1</strong><span>версия</span></div>
+    </div>
+  </div>
+</div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
@@ -43,6 +83,7 @@
           <strong id="sidebarNick">Player</strong>
           <span>offline mode</span>
         </div>
+        <button class="logout-btn" id="logoutBtn" title="Выйти">↪</button>
       </div>
       <div class="side-version">launcher <span id="launcherVersion">0.3.1</span></div>
     </div>
