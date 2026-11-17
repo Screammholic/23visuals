@@ -69,12 +69,27 @@ function releaseBase(version) {
 }
 
 async function fetchVersion() {
-   const url = `${CONFIG.pagesUrl}/version.json?t=${Date.now()}`;
-   const res = await fetch(url, { redirect: 'follow' });
-   if (!res.ok) {
-      throw new Error(`Не удалось получить version.json (${res.status})`);
+   const urls = [
+      `${CONFIG.pagesUrl}/version.json`,
+      `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch || 'main'}/docs/version.json`,
+      `https://cdn.jsdelivr.net/gh/${CONFIG.owner}/${CONFIG.repo}@${CONFIG.branch || 'main'}/docs/version.json`
+   ];
+   let lastError = null;
+
+   for (const base of urls) {
+      try {
+         const res = await fetch(`${base}?t=${Date.now()}`, { redirect: 'follow' });
+         if (!res.ok) {
+            lastError = new Error(`${base} -> ${res.status}`);
+            continue;
+         }
+         return await res.json();
+      } catch (error) {
+         lastError = error;
+      }
    }
-   return res.json();
+
+   throw new Error(`Не удалось получить version.json (${lastError?.message || 'network'})`);
 }
 
 async function downloadFile(url, destination, onProgress) {
