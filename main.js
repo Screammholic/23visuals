@@ -66,8 +66,8 @@ async function saveSettings(patch) {
    return next;
 }
 
-function releaseBase(version) {
-   return `https://github.com/${CONFIG.owner}/${CONFIG.repo}/releases/download/${version.release || 'v' + version.version}`;
+function releaseBase(tag) {
+   return `https://github.com/${CONFIG.owner}/${CONFIG.repo}/releases/download/${tag}`;
 }
 
 async function fetchVersion() {
@@ -129,7 +129,8 @@ async function ensureBase(root, version, onStage) {
    }
 
    const asset = version.base || 'base.zip';
-   const url = `${releaseBase(version)}/${asset}`;
+   const baseTag = version.baseRelease || version.release || 'v' + version.version;
+   const url = `${releaseBase(baseTag)}/${asset}`;
    const zip = path.join(root, '.downloads', asset);
    onStage({ stage: 'base', text: 'Скачивание runtime (Java, assets, libraries)', percent: 0 });
    await downloadFile(url, zip, (received, total) => {
@@ -157,7 +158,8 @@ async function ensureClient(root, version, onStage) {
    }
 
    const asset = version.client || `client-${version.version}.zip`;
-   const url = `${releaseBase(version)}/${asset}`;
+   const clientTag = version.release || 'v' + version.version;
+   const url = `${releaseBase(clientTag)}/${asset}`;
    const zip = path.join(root, '.downloads', asset);
    onStage({ stage: 'client', text: `Скачивание клиента ${version.version}`, percent: 0 });
    await downloadFile(url, zip, (received, total) => {
@@ -171,6 +173,7 @@ async function ensureClient(root, version, onStage) {
    });
 
    onStage({ stage: 'client', text: 'Распаковка клиента', percent: 99 });
+   await fsp.rm(path.join(game, 'mods'), { recursive: true, force: true });
    await extract(zip, { dir: root });
 
    const hashFile = path.join(game, 'config', '23visuals-build.sha256');
@@ -300,6 +303,9 @@ ipcMain.handle('launcher:version', async () => {
 });
 
 ipcMain.handle('launcher:play', async () => {
+   if (gameProcess) {
+      return { ok: false, error: 'Игра уже запущена' };
+   }
    if (busy) return { ok: false, error: 'Уже выполняется другая операция' };
    busy = true;
    try {

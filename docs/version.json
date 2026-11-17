@@ -1,6 +1,7 @@
 {
   "version": "0.3.1",
   "release": "v0.3.1",
+  "baseRelease": "v0.3.1",
   "baseVersion": "0.3.1",
   "base": "base.zip",
   "client": "client-0.3.1.zip",
