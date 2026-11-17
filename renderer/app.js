@@ -4,7 +4,7 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const fallbackNews = [
    {
       date: '17.11.2026',
-      title: '23Visuals 0.3.1',
+      title: 'BeeDlc 0.4.0',
       text: 'Новый лаунчер, автообновление клиента и быстрый вход без архивов.'
    },
    {
@@ -114,7 +114,7 @@ async function loadVersion() {
    const result = await window.launcher.version();
    if (result.ok) {
       remoteVersion = result.remote;
-      $('#clientVersion').textContent = result.remote.version || '0.3.1';
+      $('#clientVersion').textContent = result.remote.version || '0.4.0';
       $('#versionState').textContent = 'доступна';
       renderNews(result.remote.news);
    } else {
@@ -290,7 +290,7 @@ function setAuthMode(mode) {
    document.querySelector('.auth-card h2').textContent = register ? 'Создание аккаунта' : 'С возвращением';
    document.querySelector('.auth-sub').textContent = register
       ? 'Введи ник, пароль и ключ доступа'
-      : 'Войди, чтобы запустить 23Visuals';
+      : 'Войди, чтобы запустить BeeDlc';
    $('#authError').textContent = '';
 }
 

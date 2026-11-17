@@ -1,8 +1,8 @@
 {
-  "name": "23visuals-launcher",
-  "productName": "23Visuals",
-  "version": "0.3.1",
-  "description": "23Visuals Launcher",
+  "name": "beedlc-launcher",
+  "productName": "BeeDlc",
+  "version": "0.4.0",
+  "description": "BeeDlc Launcher",
   "main": "main.js",
   "author": "Screammholic",
   "license": "UNLICENSED",
@@ -19,9 +19,9 @@
     "electron-builder": "^26.18.0"
   },
   "build": {
-    "appId": "com.screammholic.23visuals",
-    "productName": "23Visuals",
-    "artifactName": "23VisualsLauncher-${version}.${ext}",
+    "appId": "com.screammholic.beedlc",
+    "productName": "BeeDlc",
+    "artifactName": "BeeDlcLauncher-${version}.${ext}",
     "directories": {
       "output": "build"
     },
@@ -48,7 +48,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "23Visuals"
+      "shortcutName": "BeeDlc"
     }
   }
 }

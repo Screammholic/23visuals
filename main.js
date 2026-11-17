@@ -9,7 +9,7 @@ const { pipeline } = require('node:stream/promises');
 const extract = require('extract-zip');
 
 const CONFIG = require('./launcher.config.json');
-const APP_ID = '23Visuals';
+const APP_ID = 'BeeDlc';
 const GAME_VERSION = '26.2-fabric';
 const ASSET_INDEX = '26.2-32';
 
@@ -19,7 +19,14 @@ let busy = false;
 let externalGame = null;
 
 const appData = app.getPath('appData');
+const legacyAppData = path.join(appData, '23Visuals');
 const defaultInstallDir = path.join(appData, APP_ID);
+try {
+   if (!fs.existsSync(defaultInstallDir) && fs.existsSync(legacyAppData)) {
+      fs.renameSync(legacyAppData, defaultInstallDir);
+   }
+} catch {
+}
 const settingsPath = path.join(appData, APP_ID, 'launcher-settings.json');
 const accountsPath = path.join(appData, APP_ID, 'accounts.json');
 
@@ -297,7 +304,7 @@ async function ensureClient(root, version, onStage) {
    await fsp.rm(path.join(game, 'mods'), { recursive: true, force: true });
    await extract(zip, { dir: root });
 
-   const hashFile = path.join(game, 'config', '23visuals-build.sha256');
+   const hashFile = path.join(game, 'config', 'beedlc-build.sha256');
    const hash = await fsp.readFile(hashFile, 'utf8').catch(() => '');
    if (hash.trim()) {
       await fsp.writeFile(path.join(root, '.client-hash'), hash.trim(), 'utf8');
@@ -348,7 +355,7 @@ async function launchGame(root, settings) {
       `-Dio.netty.native.workdir=${path.join(natives, 'netty')}`,
       '-Dfabric.gameMappingNamespace=official',
       '-Dfabric.development=false',
-      '-Dminecraft.launcher.brand=23Visuals',
+      '-Dminecraft.launcher.brand=BeeDlc',
       '-Dminecraft.launcher.version=0.3.1',
       '-cp',
       path.join(runtime, 'lib', '*'),

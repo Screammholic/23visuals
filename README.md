@@ -1,6 +1,6 @@
-# 23Visuals Launcher
+# BeeDlc Launcher
 
-Приватный лаунчер клиента 23Visuals. Скачивает runtime и клиент с GitHub Releases,
+Приватный лаунчер клиента BeeDlc. Скачивает runtime и клиент с GitHub Releases,
 проверяет версию через GitHub Pages и запускает Minecraft.
 
 ## Требования
@@ -23,7 +23,7 @@ npm start
 npm run dist
 ```
 
-Результат: `build\23VisualsLauncher-0.3.1.exe`.
+Результат: `build\BeeDlcLauncher-0.3.1.exe`.
 
 ## Хостинг
 
@@ -37,7 +37,7 @@ npm run dist
    ```
 5. Создай релиз и прикрепи `base.zip` и `client-0.3.1.zip`:
    ```powershell
-   gh release create v0.3.1 .\dist\base.zip .\dist\client-0.3.1.zip --title "23Visuals 0.3.1"
+   gh release create v0.3.1 .\dist\base.zip .\dist\client-0.3.1.zip --title "BeeDlc 0.3.1"
    ```
 
 ## Важно
@@ -79,7 +79,7 @@ Java/assets/libraries — пересобери `base.zip`, загрузи в н�
 
 ## Аккаунты и ключи
 
-Лаунчер хранит аккаунты локально в `%APPDATA%\23Visuals\accounts.json`
+Лаунчер хранит аккаунты локально в `%APPDATA%\BeeDlc\accounts.json`
 (пароль — scrypt-хэш). Ключи проверяются по `docs/keys.json`.
 
 Создать новые ключи:

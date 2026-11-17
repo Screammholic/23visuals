@@ -30,7 +30,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 23VisualsLauncher
+          name: BeeDlcLauncher
           path: build/*.exe
 
       - name: Publish release

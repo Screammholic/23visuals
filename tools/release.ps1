@@ -17,7 +17,7 @@ if ($files.Count -lt 2) {
    throw "Payload files not found in $dist. Run tools\make-payload.ps1 first."
 }
 
-$args = @('release', 'create', "v$Version") + $files + @('--repo', $Repo, '--title', "23Visuals $Version")
+$args = @('release', 'create', "v$Version") + $files + @('--repo', $Repo, '--title', "BeeDlc $Version")
 if ($Notes) { $args += @('--notes', $Notes) } else { $args += @('--generate-notes') }
 $args += '--latest'
 

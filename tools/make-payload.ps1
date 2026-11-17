@@ -85,10 +85,10 @@ Invoke-Robocopy $rc
 
 $configDir = Join-Path $gameStage 'game\config'
 New-Item -ItemType Directory -Force -Path $configDir | Out-Null
-$hashPath = Join-Path $configDir '23visuals-build.sha256'
+$hashPath = Join-Path $configDir 'beedlc-build.sha256'
 $hashValue = if (Test-Path $hashPath) { Get-Content $hashPath -Raw } else { '' }
 Get-ChildItem $configDir -File -ErrorAction SilentlyContinue |
-   Where-Object { $_.Name -ne '23visuals-build.sha256' } |
+   Where-Object { $_.Name -ne 'beedlc-build.sha256' } |
    Remove-Item -Force -ErrorAction SilentlyContinue
 if ($hashValue.Trim()) {
    Set-Content -Path $hashPath -Value $hashValue.Trim() -Encoding ASCII
