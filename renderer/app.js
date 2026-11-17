@@ -22,6 +22,8 @@ const fallbackNews = [
 let settings = null;
 let remoteVersion = null;
 let currentPage = 'home';
+let authMode = 'login';
+let gameRunning = false;
 
 function setStatus(text, kind = 'ok') {
    $('#statusText').textContent = text;
@@ -138,11 +140,18 @@ async function init() {
    updateAccount(settings.nickname || 'Player');
 
    $('#authNick').value = settings.nickname || '';
+   $('#authPassword').value = '';
    $('#authKey').value = settings.key || '';
    $('#rememberMe').checked = settings.remember !== false;
-   if (settings.loggedIn && settings.remember !== false) {
+
+   const auth = await window.launcher.authStatus();
+   if (auth.nickname) {
+      $('#authNick').value = auth.nickname;
+   }
+   if (auth.loggedIn && settings.remember !== false) {
       $('#authScreen').classList.add('hidden');
    } else {
+      $('#authScreen').classList.remove('hidden');
       setTimeout(() => $('#authNick').focus(), 250);
    }
 
@@ -162,7 +171,31 @@ async function init() {
          $('#playLabel').textContent = 'Играть';
       }
    });
+   window.launcher.onGame(applyGameState);
    window.launcher.onLog(log);
+
+   applyGameState(await window.launcher.state());
+   setInterval(async () => {
+      try {
+         applyGameState(await window.launcher.state());
+      } catch {
+      }
+   }, 5000);
+}
+
+function applyGameState(state) {
+   gameRunning = Boolean(state?.running);
+   if (gameRunning) {
+      setStatus('Игра запущена', 'ok');
+      $('#playBtn').disabled = true;
+      $('#playLabel').textContent = 'Игра запущена';
+   } else {
+      $('#playBtn').disabled = false;
+      $('#playLabel').textContent = 'Играть';
+      if ($('#statusText').textContent === 'Игра запущена') {
+         setStatus('Готов к запуску', 'ok');
+      }
+   }
 }
 
 function updateAccount(nick) {
@@ -171,6 +204,10 @@ function updateAccount(nick) {
 }
 
 $('#playBtn').addEventListener('click', async () => {
+   if (gameRunning) {
+      setStatus('Игра уже запущена', 'ok');
+      return;
+   }
    const button = $('#playBtn');
    button.disabled = true;
    $('#playLabel').textContent = 'Запуск...';
@@ -243,8 +280,23 @@ $('#minBtn').addEventListener('click', () => window.launcher.minimize());
 $('#maxBtn').addEventListener('click', () => window.launcher.maximize());
 $('#closeBtn').addEventListener('click', () => window.launcher.close());
 
-async function login() {
+function setAuthMode(mode) {
+   authMode = mode;
+   const register = mode === 'register';
+   $('#keyField').classList.toggle('hidden', !register);
+   $('#passwordLabel').textContent = register ? 'Пароль' : 'Пароль';
+   $('#loginBtn').textContent = register ? 'Создать аккаунт' : 'Войти';
+   $('#modeBtn').textContent = register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
+   document.querySelector('.auth-card h2').textContent = register ? 'Создание аккаунта' : 'С возвращением';
+   document.querySelector('.auth-sub').textContent = register
+      ? 'Введи ник, пароль и ключ доступа'
+      : 'Войди, чтобы запустить 23Visuals';
+   $('#authError').textContent = '';
+}
+
+async function submitAuth() {
    const nick = $('#authNick').value.trim().replace(/[^a-zA-Z0-9_]/g, '');
+   const password = $('#authPassword').value;
    const key = $('#authKey').value.trim();
    const remember = $('#rememberMe').checked;
 
@@ -252,29 +304,65 @@ async function login() {
       $('#authError').textContent = 'Ник должен быть от 3 символов (a-z, 0-9, _)';
       return;
    }
+   if (password.length < 4) {
+      $('#authError').textContent = 'Пароль должен быть не короче 4 символов';
+      return;
+   }
 
-   settings = await window.launcher.saveSettings({ nickname: nick, key, loggedIn: true, remember });
-   updateAccount(nick);
-   $('#nickInput').value = nick;
-   $('#keyInput').value = key;
    $('#authError').textContent = '';
-   $('#authScreen').classList.add('hidden');
-   setStatus('Готов к запуску', 'ok');
-   log(`[Launcher] Вход: ${nick}`);
+   $('#loginBtn').disabled = true;
+
+   try {
+      let result;
+      if (authMode === 'register') {
+         result = await window.launcher.authRegister({ nickname: nick, password, key });
+         if (result.ok) {
+            settings = await window.launcher.saveSettings({
+               nickname: result.nickname,
+               key,
+               loggedIn: true,
+               remember
+            });
+            $('#keyInput').value = key;
+         }
+      } else {
+         result = await window.launcher.authLogin({ nickname: nick, password });
+         if (result.ok) {
+            settings = await window.launcher.saveSettings({ loggedIn: true, remember });
+         }
+      }
+
+      if (!result.ok) {
+         $('#authError').textContent = result.error || 'Ошибка входа';
+         return;
+      }
+
+      updateAccount(result.nickname || nick);
+      $('#nickInput').value = result.nickname || nick;
+      $('#authScreen').classList.add('hidden');
+      setStatus('Готов к запуску', 'ok');
+      log(`[Launcher] Вход: ${result.nickname || nick}`);
+   } catch (error) {
+      $('#authError').textContent = error.message || 'Ошибка';
+   } finally {
+      $('#loginBtn').disabled = false;
+   }
 }
 
-$('#loginBtn').addEventListener('click', login);
+$('#loginBtn').addEventListener('click', submitAuth);
+$('#modeBtn').addEventListener('click', () => setAuthMode(authMode === 'login' ? 'register' : 'login'));
 $('#forgotBtn').addEventListener('click', () => window.launcher.openDiscord());
-[$('#authNick'), $('#authKey')].forEach((input) => {
+[$('#authNick'), $('#authPassword'), $('#authKey')].forEach((input) => {
    input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') login();
+      if (event.key === 'Enter') submitAuth();
    });
 });
 
 $('#logoutBtn').addEventListener('click', async () => {
    settings = await window.launcher.saveSettings({ loggedIn: false });
+   setAuthMode('login');
    $('#authNick').value = settings.nickname || '';
-   $('#authKey').value = settings.key || '';
+   $('#authPassword').value = '';
    $('#rememberMe').checked = false;
    $('#authScreen').classList.remove('hidden');
    setTimeout(() => $('#authNick').focus(), 200);

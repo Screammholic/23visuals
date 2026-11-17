@@ -8,6 +8,11 @@ contextBridge.exposeInMainWorld('launcher', {
    getSettings: () => ipcRenderer.invoke('settings:get'),
    saveSettings: (patch) => ipcRenderer.invoke('settings:save', patch),
    config: () => ipcRenderer.invoke('launcher:config'),
+   state: () => ipcRenderer.invoke('launcher:state'),
+
+   authStatus: () => ipcRenderer.invoke('auth:status'),
+   authLogin: (payload) => ipcRenderer.invoke('auth:login', payload),
+   authRegister: (payload) => ipcRenderer.invoke('auth:register', payload),
 
    version: () => ipcRenderer.invoke('launcher:version'),
    play: () => ipcRenderer.invoke('launcher:play'),
@@ -20,5 +25,6 @@ contextBridge.exposeInMainWorld('launcher', {
 
    onProgress: (callback) => ipcRenderer.on('launcher:progress', (_event, data) => callback(data)),
    onStatus: (callback) => ipcRenderer.on('launcher:status', (_event, data) => callback(data)),
+   onGame: (callback) => ipcRenderer.on('launcher:game', (_event, data) => callback(data)),
    onLog: (callback) => ipcRenderer.on('game:log', (_event, line) => callback(line))
 });

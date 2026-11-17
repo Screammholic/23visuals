@@ -13,12 +13,12 @@
 <div class="auth" id="authScreen">
   <div class="auth-bg-mark">23</div>
   <div class="auth-top">
-    <div class="auth-brand"><span class="brand-mark small">23</span><span>23VISUALS</span></div>
+    <div class="auth-brand"><span class="brand-mark small"><img src="../assets/logo.png" alt="23Visuals" /></span><span>23VISUALS</span></div>
     <div class="auth-meta"><span id="authDate">17.11.2026</span><span>v0.3.1</span></div>
   </div>
 
   <div class="auth-card">
-    <div class="auth-logo">23</div>
+    <div class="auth-logo"><img src="../assets/logo.png" alt="23Visuals" /></div>
     <h2>С возвращением</h2>
     <p class="auth-sub">Войди, чтобы запустить 23Visuals</p>
 
@@ -28,8 +28,13 @@
     </label>
 
     <label class="auth-field">
-      <span>Пароль или ключ</span>
-      <input id="authKey" type="password" autocomplete="off" placeholder="Необязательно" />
+      <span id="passwordLabel">Пароль</span>
+      <input id="authPassword" type="password" autocomplete="off" placeholder="Введи пароль" />
+    </label>
+
+    <label class="auth-field hidden" id="keyField">
+      <span>Ключ доступа</span>
+      <input id="authKey" type="text" autocomplete="off" placeholder="23V-XXXX-XXXX-XXXX-XXXX-XXXX" />
     </label>
 
     <div class="auth-options">
@@ -38,6 +43,7 @@
     </div>
 
     <button class="auth-btn" id="loginBtn">Войти</button>
+    <button class="mode-switch" id="modeBtn">Нет аккаунта? Зарегистрироваться</button>
     <div class="auth-error" id="authError"></div>
 
     <div class="auth-stats">
@@ -51,7 +57,7 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-mark">23</div>
+      <div class="brand-mark"><img src="../assets/logo.png" alt="23Visuals" /></div>
       <div class="brand-text">
         <strong>23VISUALS</strong>
         <span>private client</span>

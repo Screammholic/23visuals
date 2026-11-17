@@ -3,7 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
-const { spawn } = require('node:child_process');
+const { spawn, execFile } = require('node:child_process');
 const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const extract = require('extract-zip');
@@ -16,10 +16,12 @@ const ASSET_INDEX = '26.2-32';
 let mainWindow = null;
 let gameProcess = null;
 let busy = false;
+let externalGame = null;
 
 const appData = app.getPath('appData');
 const defaultInstallDir = path.join(appData, APP_ID);
 const settingsPath = path.join(appData, APP_ID, 'launcher-settings.json');
+const accountsPath = path.join(appData, APP_ID, 'accounts.json');
 
 const defaultSettings = {
    installDir: defaultInstallDir,
@@ -31,6 +33,19 @@ const defaultSettings = {
    remember: true,
    closeLauncherOnPlay: false
 };
+
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+   app.quit();
+} else {
+   app.on('second-instance', () => {
+      if (mainWindow) {
+         if (mainWindow.isMinimized()) mainWindow.restore();
+         mainWindow.show();
+         mainWindow.focus();
+      }
+   });
+}
 
 function send(channel, payload) {
    if (mainWindow && !mainWindow.isDestroyed()) {
@@ -64,6 +79,112 @@ async function saveSettings(patch) {
    const next = { ...current, ...patch };
    await writeJson(settingsPath, next);
    return next;
+}
+
+function sha256(text) {
+   return crypto.createHash('sha256').update(String(text), 'utf8').digest('hex');
+}
+
+function normalizeKey(key) {
+   return String(key || '').trim().toUpperCase();
+}
+
+function validKeyFormat(key) {
+   return /^23V(?:-[0-9A-Z]{4}){5}$/.test(key);
+}
+
+async function loadAccounts() {
+   return readJson(accountsPath, { accounts: {}, usedKeys: {} });
+}
+
+async function fetchKeys() {
+   const urls = [
+      `${CONFIG.pagesUrl}/keys.json`,
+      `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch || 'main'}/docs/keys.json`,
+      `https://cdn.jsdelivr.net/gh/${CONFIG.owner}/${CONFIG.repo}@${CONFIG.branch || 'main'}/docs/keys.json`
+   ];
+   let lastError = null;
+
+   for (const base of urls) {
+      try {
+         const res = await fetch(`${base}?t=${Date.now()}`, { redirect: 'follow' });
+         if (!res.ok) {
+            lastError = new Error(`${base} -> ${res.status}`);
+            continue;
+         }
+         const data = await res.json();
+         return Array.isArray(data) ? data : data.keys || [];
+      } catch (error) {
+         lastError = error;
+      }
+   }
+
+   throw new Error(`Список ключей недоступен (${lastError?.message || 'network'})`);
+}
+
+function gameState() {
+   if (gameProcess) {
+      return { running: true, pid: gameProcess.pid, startedAt: gameProcess.__startedAt || null, external: false };
+   }
+   if (externalGame) {
+      return { running: true, pid: externalGame.pid, startedAt: externalGame.startedAt, external: true };
+   }
+   return { running: false, pid: null, startedAt: null, external: false };
+}
+
+function broadcastGameState() {
+   send('launcher:game', gameState());
+}
+
+function execPowerShell(script) {
+   return new Promise((resolve) => {
+      execFile(
+         'powershell.exe',
+         ['-NoProfile', '-NonInteractive', '-Command', script],
+         { windowsHide: true, timeout: 8000 },
+         (error, stdout) => resolve(error ? '' : String(stdout || ''))
+      );
+   });
+}
+
+async function refreshExternalGame() {
+   if (gameProcess) {
+      return;
+   }
+
+   const settings = await loadSettings();
+   const root = String(settings.installDir || defaultInstallDir).toLowerCase().replaceAll('/', '\\');
+   const script =
+      'Get-CimInstance Win32_Process -Filter "Name=\'java.exe\'" | ' +
+      'Where-Object { $_.CommandLine -like "*KnotClient*" } | ' +
+      'Select-Object ProcessId,CommandLine,CreationDate | ConvertTo-Json -Compress';
+   const output = (await execPowerShell(script)).trim();
+   let found = null;
+
+   if (output) {
+      try {
+         const parsed = JSON.parse(output);
+         const list = Array.isArray(parsed) ? parsed : [parsed];
+         const normalizedRoot = root;
+         const match =
+            list.find((item) => String(item.CommandLine || '').toLowerCase().replaceAll('/', '\\').includes(normalizedRoot)) ||
+            (list.length === 1 ? list[0] : null);
+         if (match) {
+            found = {
+               pid: Number(match.ProcessId),
+               startedAt: match.CreationDate || null
+            };
+         }
+      } catch {
+         found = null;
+      }
+   }
+
+   const changed = JSON.stringify(found) !== JSON.stringify(externalGame);
+   externalGame = found;
+   if (changed) {
+      broadcastGameState();
+   }
 }
 
 function releaseBase(tag) {
@@ -247,6 +368,8 @@ async function launchGame(root, settings) {
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
    });
+   gameProcess.__startedAt = new Date().toISOString();
+   broadcastGameState();
 
    const pipe = (stream) => {
       stream.setEncoding('utf8');
@@ -264,11 +387,13 @@ async function launchGame(root, settings) {
    gameProcess.on('error', (error) => {
       send('launcher:status', { state: 'error', text: `Не удалось запустить Java: ${error.message}` });
       gameProcess = null;
+      broadcastGameState();
    });
 
    gameProcess.on('exit', (code) => {
       send('launcher:status', { state: 'idle', text: code === 0 ? 'Игра закрыта' : `Игра завершилась с кодом ${code}` });
       gameProcess = null;
+      broadcastGameState();
    });
 
    send('launcher:status', { state: 'running', text: 'Игра запущена' });
@@ -285,6 +410,95 @@ ipcMain.handle('window:close', () => mainWindow?.close());
 ipcMain.handle('settings:get', async () => loadSettings());
 ipcMain.handle('settings:save', async (_event, patch) => saveSettings(patch || {}));
 
+ipcMain.handle('auth:status', async () => {
+   const accounts = await loadAccounts();
+   const settings = await loadSettings();
+   const nick = String(settings.nickname || '').toLowerCase();
+   const exists = Boolean(accounts.accounts[nick]);
+   return {
+      hasAccounts: Object.keys(accounts.accounts).length > 0,
+      loggedIn: Boolean(settings.loggedIn && exists),
+      nickname: exists ? accounts.accounts[nick].nickname : settings.nickname || ''
+   };
+});
+
+ipcMain.handle('auth:register', async (_event, payload) => {
+   try {
+      const nickname = String(payload?.nickname || '').trim();
+      const password = String(payload?.password || '');
+      const key = normalizeKey(payload?.key);
+
+      if (!/^[A-Za-z0-9_]{3,16}$/.test(nickname)) {
+         return { ok: false, error: 'Ник: 3–16 символов, только a-z, 0-9 и _' };
+      }
+      if (password.length < 4) {
+         return { ok: false, error: 'Пароль должен быть не короче 4 символов' };
+      }
+      if (!validKeyFormat(key)) {
+         return { ok: false, error: 'Неверный формат ключа (23V-XXXX-...)' };
+      }
+
+      const accounts = await loadAccounts();
+      const lower = nickname.toLowerCase();
+      if (accounts.accounts[lower]) {
+         return { ok: false, error: 'Такой аккаунт уже существует' };
+      }
+
+      const keyHash = sha256(key);
+      if (accounts.usedKeys[keyHash]) {
+         return { ok: false, error: `Ключ уже использован (${accounts.usedKeys[keyHash]})` };
+      }
+
+      const keys = await fetchKeys();
+      const allowed = keys.some((entry) => {
+         const hash = typeof entry === 'string' ? entry : entry.hash;
+         return String(hash || '').toLowerCase() === keyHash;
+      });
+      if (!allowed) {
+         return { ok: false, error: 'Ключ не найден или отозван' };
+      }
+
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+      accounts.accounts[lower] = {
+         nickname,
+         salt,
+         hash,
+         keyHash,
+         created: Date.now()
+      };
+      accounts.usedKeys[keyHash] = nickname;
+      await writeJson(accountsPath, accounts);
+      await saveSettings({ nickname, key, loggedIn: true });
+      return { ok: true, nickname };
+   } catch (error) {
+      return { ok: false, error: error.message };
+   }
+});
+
+ipcMain.handle('auth:login', async (_event, payload) => {
+   try {
+      const nickname = String(payload?.nickname || '').trim();
+      const password = String(payload?.password || '');
+      const accounts = await loadAccounts();
+      const account = accounts.accounts[nickname.toLowerCase()];
+      if (!account) {
+         return { ok: false, error: 'Аккаунт не найден. Зарегистрируйся.' };
+      }
+
+      const hash = crypto.scryptSync(password, account.salt, 64);
+      const expected = Buffer.from(account.hash, 'hex');
+      if (hash.length !== expected.length || !crypto.timingSafeEqual(hash, expected)) {
+         return { ok: false, error: 'Неверный пароль' };
+      }
+
+      await saveSettings({ nickname: account.nickname, loggedIn: true });
+      return { ok: true, nickname: account.nickname };
+   } catch (error) {
+      return { ok: false, error: error.message };
+   }
+});
+
 ipcMain.handle('launcher:config', () => ({
    version: app.getVersion(),
    owner: CONFIG.owner,
@@ -292,6 +506,8 @@ ipcMain.handle('launcher:config', () => ({
    pagesUrl: CONFIG.pagesUrl,
    discord: CONFIG.discord
 }));
+
+ipcMain.handle('launcher:state', () => gameState());
 
 ipcMain.handle('launcher:version', async () => {
    try {
@@ -384,6 +600,7 @@ function createWindow() {
       transparent: false,
       backgroundColor: '#0a0a0f',
       show: false,
+      icon: path.join(__dirname, 'assets', 'icon.ico'),
       webPreferences: {
          preload: path.join(__dirname, 'preload.js'),
          contextIsolation: true,
@@ -400,6 +617,8 @@ function createWindow() {
 
 app.whenReady().then(() => {
    createWindow();
+   refreshExternalGame().catch(() => {});
+   setInterval(() => refreshExternalGame().catch(() => {}), 8000);
    app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
    });
