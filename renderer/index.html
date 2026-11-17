@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:; font-src 'self' data:;" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>23Visuals Launcher</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">23</div>
+      <div class="brand-text">
+        <strong>23VISUALS</strong>
+        <span>private client</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-page="home">
+        <span class="ico">⌂</span> Главная
+      </button>
+      <button class="nav-item" data-page="news">
+        <span class="ico">✦</span> Новости
+      </button>
+      <button class="nav-item" data-page="mods">
+        <span class="ico">▦</span> Моды
+      </button>
+      <button class="nav-item" data-page="settings">
+        <span class="ico">⚙</span> Настройки
+      </button>
+      <button class="nav-item" id="discordBtn">
+        <span class="ico">◈</span> Discord
+      </button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="account-card">
+        <div class="avatar" id="avatar">P</div>
+        <div class="account-meta">
+          <strong id="sidebarNick">Player</strong>
+          <span>offline mode</span>
+        </div>
+      </div>
+      <div class="side-version">launcher <span id="launcherVersion">0.3.1</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="titlebar">
+      <div class="drag-area"></div>
+      <div class="title-actions">
+        <button class="win-btn" id="minBtn">—</button>
+        <button class="win-btn" id="maxBtn">▢</button>
+        <button class="win-btn close" id="closeBtn">✕</button>
+      </div>
+    </header>
+
+    <section class="page active" id="page-home">
+      <div class="home-grid">
+        <div class="hero">
+          <div class="hero-glow"></div>
+          <div class="hero-watermark">23</div>
+          <div class="hero-content">
+            <div class="pill"><span id="statusDot"></span> <span id="statusText">Готов к запуску</span></div>
+            <h1>23VISUALS</h1>
+            <p class="hero-sub">Приватный клиент для PvP. Быстро, красиво, без лишнего.</p>
+
+            <div class="hero-actions">
+              <button class="play-btn" id="playBtn">
+                <span class="play-ico">▶</span>
+                <span id="playLabel">Играть</span>
+              </button>
+              <button class="ghost-btn" id="folderBtn">Папка клиента</button>
+            </div>
+
+            <div class="progress-wrap" id="progressWrap">
+              <div class="progress-top">
+                <span id="progressText">Проверка файлов...</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-side">
+          <div class="stat-card">
+            <span class="stat-label">Версия клиента</span>
+            <strong id="clientVersion">0.3.1</strong>
+            <span class="stat-sub" id="versionState">проверка...</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Модов установлено</span>
+            <strong id="modCount">0</strong>
+            <span class="stat-sub">в папке game/mods</span>
+          </div>
+          <div class="stat-card accent">
+            <span class="stat-label">CPU / RAM</span>
+            <strong id="ramLabel">4 GB</strong>
+            <span class="stat-sub">настраивается в параметрах</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h2>Последние новости</h2>
+        <button class="link-btn" data-page-link="news">Все новости</button>
+      </div>
+      <div class="news-row" id="homeNews"></div>
+    </section>
+
+    <section class="page" id="page-news">
+      <div class="section-head">
+        <h1>Новости</h1>
+      </div>
+      <div class="news-list" id="newsList"></div>
+    </section>
+
+    <section class="page" id="page-mods">
+      <div class="section-head">
+        <h1>Моды</h1>
+        <span class="muted" id="modsHint">Список берётся из game/mods</span>
+      </div>
+      <div class="mods-list" id="modsList"></div>
+    </section>
+
+    <section class="page" id="page-settings">
+      <div class="section-head">
+        <h1>Настройки</h1>
+      </div>
+      <div class="settings-grid">
+        <div class="panel">
+          <h3>Профиль</h3>
+          <label class="field">
+            <span>Никнейм</span>
+            <input id="nickInput" maxlength="16" placeholder="Player" />
+          </label>
+          <label class="field">
+            <span>Лицензионный ключ</span>
+            <input id="keyInput" placeholder="23V-..." />
+          </label>
+        </div>
+
+        <div class="panel">
+          <h3>Производительность</h3>
+          <label class="field">
+            <span>Оперативная память: <b id="ramValue">4 GB</b></span>
+            <input type="range" id="ramRange" min="2" max="16" step="1" value="4" />
+          </label>
+          <label class="field">
+            <span>Папка клиента</span>
+            <div class="row">
+              <input id="dirInput" readonly />
+              <button class="ghost-btn small" id="chooseDirBtn">Выбрать</button>
+            </div>
+          </label>
+          <label class="check-row">
+            <input type="checkbox" id="localMode" />
+            <span>Локальный клиент (не проверять обновления)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button class="play-btn small" id="saveBtn">Сохранить</button>
+        <button class="ghost-btn" id="logsBtn">Логи</button>
+        <button class="ghost-btn" id="repairBtn">Перепроверить файлы</button>
+      </div>
+      <p class="save-state" id="saveState"></p>
+    </section>
+
+    <section class="log-panel" id="logPanel">
+      <div class="log-head">
+        <span>Консоль</span>
+        <button class="link-btn" id="clearLogBtn">Очистить</button>
+      </div>
+      <pre id="logOutput"></pre>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
